@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Annotated
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
@@ -19,7 +21,19 @@ class Settings(BaseSettings):
     # Ingestion is synchronous and embeds on CPU, so a long PDF would outlast
     # a typical host's request timeout. Tune after deploying.
     max_pages: int = 20
-    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # NoDecode so a plain comma-separated CORS_ORIGINS works in a hosting
+    # dashboard; the default would demand a JSON array.
+    cors_origins: Annotated[list[str], NoDecode] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _split_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
 
 
 settings = Settings()
