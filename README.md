@@ -19,10 +19,10 @@ need an answer they can trace back to a page, not a plausible-sounding paragraph
 
 ## Status
 
-Work in progress — v1 is being built in public. Nothing below is done yet.
+Work in progress — v1 is being built in public.
 
-- [ ] PDF upload and extraction
-- [ ] Chunking with Arabic normalization
+- [x] PDF upload and extraction
+- [x] Chunking with Arabic normalization
 - [ ] Multilingual embeddings + Qdrant
 - [ ] Answers with page citations
 - [ ] React UI with RTL

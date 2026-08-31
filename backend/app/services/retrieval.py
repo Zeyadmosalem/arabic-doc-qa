@@ -1,20 +1,68 @@
 """Finding the chunks that answer a question, and writing the answer."""
 
-from app.models import Answer, Chunk
+from groq import Groq
+from qdrant_client.http import models as qmodels
+
+from app.config import settings
+from app.models import Answer, Chunk, Citation
+from app.services.ingest import embed_texts, get_qdrant_client
+
+SNIPPET_LENGTH = 240
+
+SYSTEM_PROMPT = """You answer questions about a document using only the context provided.
+
+Rules:
+- Use only the context. If the answer is not there, say so plainly and stop.
+- Answer in the same language as the question. If the question is in Arabic, answer \
+in Arabic; if in English, answer in English.
+- Cite the page for every claim, in the form (p. 3).
+- Be brief. Do not speculate, and do not add information from outside the context."""
 
 
-def search(query: str, top_k: int) -> list[Chunk]:
+def search(query: str, top_k: int, *, document_id: str | None = None) -> list[Chunk]:
     """Find the chunks most similar to a question.
 
     Args:
         query: The user's question, in Arabic or English.
         top_k: How many chunks to return.
+        document_id: Restrict the search to one document, or None to search all.
 
     Returns:
         Up to top_k chunks ordered by descending similarity, each with its
-        score and source page set.
+        score and source page set. Empty if nothing has been indexed yet.
     """
-    raise NotImplementedError
+    client = get_qdrant_client()
+    if not client.collection_exists(settings.qdrant_collection):
+        return []
+
+    query_filter = None
+    if document_id is not None:
+        query_filter = qmodels.Filter(
+            must=[
+                qmodels.FieldCondition(
+                    key="document_id",
+                    match=qmodels.MatchValue(value=document_id),
+                )
+            ]
+        )
+
+    response = client.query_points(
+        collection_name=settings.qdrant_collection,
+        query=embed_texts([query], prefix="query")[0],
+        query_filter=query_filter,
+        limit=top_k,
+        with_payload=True,
+    )
+    return [
+        Chunk(
+            id=str(point.id),
+            text=point.payload["text"],
+            page=point.payload["page"],
+            document_id=point.payload["document_id"],
+            score=point.score,
+        )
+        for point in response.points
+    ]
 
 
 def answer(question: str, chunks: list[Chunk]) -> Answer:
@@ -28,4 +76,34 @@ def answer(question: str, chunks: list[Chunk]) -> Answer:
         An Answer in the language of the question, with a citation for each
         page it drew on.
     """
-    raise NotImplementedError
+    if not settings.groq_api_key:
+        raise RuntimeError("GROQ_API_KEY is not set")
+
+    context = "\n\n".join(f"[page {chunk.page}]\n{chunk.text}" for chunk in chunks)
+    completion = Groq(api_key=settings.groq_api_key).chat.completions.create(
+        model=settings.groq_model,
+        temperature=0,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
+        ],
+    )
+    return Answer(
+        text=(completion.choices[0].message.content or "").strip(),
+        citations=_citations(chunks),
+    )
+
+
+def _citations(chunks: list[Chunk]) -> list[Citation]:
+    """One citation per distinct page, in retrieval order, best-scoring chunk first."""
+    citations: list[Citation] = []
+    seen: set[int] = set()
+    for chunk in chunks:
+        if chunk.page in seen:
+            continue
+        seen.add(chunk.page)
+        snippet = chunk.text[:SNIPPET_LENGTH]
+        if len(chunk.text) > SNIPPET_LENGTH:
+            snippet = snippet.rstrip() + "…"
+        citations.append(Citation(page=chunk.page, snippet=snippet))
+    return citations

@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.1-8b-instant"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
+    qdrant_collection: str = "documents"
     embedding_model: str = "intfloat/multilingual-e5-base"
     cors_origins: list[str] = ["http://localhost:5173"]
 

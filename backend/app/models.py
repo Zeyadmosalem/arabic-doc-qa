@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Page(BaseModel):
@@ -30,3 +30,20 @@ class Answer(BaseModel):
 
     text: str
     citations: list[Citation]
+
+
+class UploadResponse(BaseModel):
+    """What /upload hands back so the client can ask about the document."""
+
+    document_id: str
+    filename: str
+    pages: int
+    chunks: int
+
+
+class AskRequest(BaseModel):
+    """A question about one previously uploaded document."""
+
+    question: str = Field(min_length=1)
+    document_id: str = Field(min_length=1)
+    top_k: int = Field(default=5, ge=1, le=20)
