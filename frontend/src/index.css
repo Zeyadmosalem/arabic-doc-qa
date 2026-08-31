@@ -714,15 +714,20 @@ button {
 }
 
 .viewer canvas {
-  max-width: 100%;
-  height: auto !important;
+  /* No max-width: the canvas is rendered at the zoomed width and must be
+     allowed to exceed the frame, which scrolls. Clamping it to 100% silently
+     undoes every zoom-in. */
+  display: block;
   border-radius: 5px;
   box-shadow: var(--shadow-md);
 }
 
 .react-pdf__Page {
-  display: flex;
-  justify-content: center;
+  /* fit-content plus auto margins, not flex centering: a centred flex item
+     that overflows its container is clipped on the left and cannot be
+     scrolled back to. */
+  width: fit-content;
+  margin: 0 auto;
   border-radius: 5px;
 }
 

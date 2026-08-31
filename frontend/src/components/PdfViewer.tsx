@@ -110,7 +110,7 @@ export default function PdfViewer({ file, page, onPageChange }: Props) {
               key={`${page}-${zoom}`}
               className="is-flashing"
               pageNumber={page}
-              width={Math.floor((width - 24) * zoom)}
+              width={Math.floor(width * zoom)}
               renderAnnotationLayer={false}
               loading={<p className="muted viewer__status">Rendering page {page}…</p>}
             />
