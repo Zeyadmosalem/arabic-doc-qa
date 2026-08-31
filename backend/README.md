@@ -1,13 +1,3 @@
----
-title: Arabic Doc QA API
-emoji: 📄
-colorFrom: green
-colorTo: gray
-sdk: gradio
-app_file: space_app.py
-pinned: false
----
-
 # Backend
 
 FastAPI service behind [arabic-doc-qa](https://github.com/Zeyadmosalem/arabic-doc-qa).
@@ -36,5 +26,13 @@ pytest
 ruff check .
 ```
 
-The embedding model is baked into the Docker image, so a cold start does not
-have to download 1.1 GB before answering the first request.
+## Deployment
+
+Runs on Google Cloud Run from the `Dockerfile` here:
+
+```bash
+gcloud run deploy arabic-doc-qa-api --source . --region europe-west1 \n  --allow-unauthenticated --memory 2Gi --cpu 2 --timeout 300
+```
+
+The container honours `$PORT`, and the embedding model is baked into the
+image so a cold start does not spend its first request downloading 1.1 GB.
