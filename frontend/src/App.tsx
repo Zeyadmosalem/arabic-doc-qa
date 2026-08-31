@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Moon, Sun } from "lucide-react"
 import type { UploadedDocument } from "./api"
 import UploadScreen from "./components/UploadScreen"
 import Workspace from "./components/Workspace"
@@ -16,19 +17,27 @@ export default function App() {
   return (
     <div className={`app${loaded ? " app--wide" : ""}`}>
       <header className="masthead">
-        <div>
-          <h1>Arabic Doc Q&amp;A</h1>
-          <p className="muted">
-            Ask a PDF in Arabic or English. Every answer cites the page it came from.
-          </p>
+        <div className="brand">
+          <span className="brand__mark" aria-hidden="true">
+            ع
+          </span>
+          <span className="brand__name">
+            Arabic Doc Q&amp;A
+            <small>Grounded answers with page citations</small>
+          </span>
         </div>
+
         <button
           className="iconbutton"
           onClick={toggle}
           aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
           title={theme === "dark" ? "Light theme" : "Dark theme"}
         >
-          {theme === "dark" ? "☀" : "☾"}
+          {theme === "dark" ? (
+            <Sun size={16} strokeWidth={1.75} />
+          ) : (
+            <Moon size={16} strokeWidth={1.75} />
+          )}
         </button>
       </header>
 

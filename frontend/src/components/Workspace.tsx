@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react"
+import { FileText, PanelRightClose, PanelRightOpen, RotateCcw } from "lucide-react"
 import type { UploadedDocument } from "../api"
 import ChatPanel from "./ChatPanel"
 
@@ -19,22 +20,32 @@ export default function Workspace({ document: uploaded, file, onChangeDocument }
     <div className="workspace">
       <div className="docbar">
         <div className="docbar__meta">
+          <span className="docbar__icon">
+            <FileText size={15} strokeWidth={1.75} />
+          </span>
           <strong className="docbar__name" title={uploaded.filename}>
             {uploaded.filename}
           </strong>
-          <span className="muted">
+          <span className="docbar__stats">
             {uploaded.pages} pages · {uploaded.chunks} chunks
           </span>
         </div>
+
         <div className="docbar__actions">
           <button
             className="button button--quiet"
             onClick={() => setShowViewer((shown) => !shown)}
             aria-pressed={showViewer}
           >
+            {showViewer ? (
+              <PanelRightClose size={15} strokeWidth={1.75} />
+            ) : (
+              <PanelRightOpen size={15} strokeWidth={1.75} />
+            )}
             {showViewer ? "Hide PDF" : "Show PDF"}
           </button>
           <button className="button button--quiet" onClick={onChangeDocument}>
+            <RotateCcw size={15} strokeWidth={1.75} />
             New document
           </button>
         </div>
