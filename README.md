@@ -40,13 +40,22 @@ Python 3.11 · FastAPI · PyMuPDF · sentence-transformers (`intfloat/multilingu
 
 ## Run locally
 
+Backend:
+
 ```bash
 cp .env.example .env          # then fill in GROQ_API_KEY and QDRANT_URL
 pip install -e "backend[dev]"
 make dev                      # http://127.0.0.1:8000/health
 ```
 
-`make test` runs the tests, `make lint` runs ruff.
+Front end, in a second terminal:
+
+```bash
+cd frontend && npm install
+make web                      # http://localhost:5173
+```
+
+`make test` runs the tests, `make lint` runs ruff, `make build-web` builds the front end.
 
 ## Demo
 
