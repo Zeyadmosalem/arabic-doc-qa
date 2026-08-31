@@ -1,5 +1,7 @@
 """Finding the chunks that answer a question, and writing the answer."""
 
+import re
+
 from groq import Groq
 from qdrant_client.http import models as qmodels
 
@@ -8,6 +10,9 @@ from app.models import Answer, Chunk, Citation
 from app.services.ingest import embed_texts, get_qdrant_client
 
 SNIPPET_LENGTH = 240
+
+# Matches the "(p. 3)" / "(p. 10, p. 11)" refs the prompt asks the model to emit.
+_PAGE_REF = re.compile(r"p\.\s*(\d+)")
 
 SYSTEM_PROMPT = """You answer questions about a document using only the context provided.
 
@@ -88,18 +93,25 @@ def answer(question: str, chunks: list[Chunk]) -> Answer:
             {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
         ],
     )
-    return Answer(
-        text=(completion.choices[0].message.content or "").strip(),
-        citations=_citations(chunks),
-    )
+    text = (completion.choices[0].message.content or "").strip()
+    return Answer(text=text, citations=_citations(chunks, cited_in=text))
 
 
-def _citations(chunks: list[Chunk]) -> list[Citation]:
-    """One citation per distinct page, in retrieval order, best-scoring chunk first."""
+def _citations(chunks: list[Chunk], *, cited_in: str = "") -> list[Citation]:
+    """One citation per distinct page the answer actually leans on.
+
+    Prefers the pages the model cited inline as "(p. 3)", keeping only those it
+    was really shown so a hallucinated page number cannot invent a citation.
+    Falls back to every retrieved page when the model cited nothing, which is
+    the honest answer to "where did this come from?" in that case.
+    """
+    retrieved_pages = {chunk.page for chunk in chunks}
+    wanted = {int(page) for page in _PAGE_REF.findall(cited_in)} & retrieved_pages
+
     citations: list[Citation] = []
     seen: set[int] = set()
     for chunk in chunks:
-        if chunk.page in seen:
+        if chunk.page in seen or (wanted and chunk.page not in wanted):
             continue
         seen.add(chunk.page)
         snippet = chunk.text[:SNIPPET_LENGTH]

@@ -23,15 +23,15 @@ Work in progress — v1 is being built in public.
 
 - [x] PDF upload and extraction
 - [x] Chunking with Arabic normalization
-- [ ] Multilingual embeddings + Qdrant
-- [ ] Answers with page citations
+- [x] Multilingual embeddings + Qdrant
+- [x] Answers with page citations
 - [ ] React UI with RTL
 - [ ] Public deployment
 - [ ] 10-question evaluation (5 Arabic, 5 English)
 
 ## Stack
 
-Python 3.11 · FastAPI · PyMuPDF · sentence-transformers (`intfloat/multilingual-e5-base`) · Qdrant · Groq · Vite + React + TypeScript
+Python 3.11 · FastAPI · PyMuPDF · sentence-transformers (`intfloat/multilingual-e5-base`) · Qdrant · Groq (`qwen/qwen3.8-27b`) · Vite + React + TypeScript
 
 ## Run locally
 
