@@ -25,7 +25,7 @@ Work in progress — v1 is being built in public.
 - [x] Chunking with Arabic normalization
 - [x] Multilingual embeddings + Qdrant
 - [x] Answers with page citations
-- [ ] React UI with RTL
+- [x] React UI with RTL
 - [ ] Public deployment
 - [ ] 10-question evaluation (5 Arabic, 5 English)
 
