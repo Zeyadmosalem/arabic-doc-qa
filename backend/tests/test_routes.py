@@ -48,6 +48,30 @@ class TestUpload:
         assert response.status_code == 422
         assert "OCR" in response.json()["detail"]
 
+    def test_rejects_a_pdf_with_more_pages_than_v1_indexes(self, make_pdf, monkeypatch):
+        monkeypatch.setattr(settings, "max_pages", 3)
+        monkeypatch.setattr("app.routes.documents.upsert_chunks", lambda chunks: None)
+
+        response = client.post(
+            "/upload",
+            files={"file": ("long.pdf", make_pdf(["page"] * 4), "application/pdf")},
+        )
+
+        assert response.status_code == 422
+        assert "4 pages" in response.json()["detail"]
+
+    def test_accepts_a_pdf_exactly_at_the_page_limit(self, make_pdf, monkeypatch):
+        monkeypatch.setattr(settings, "max_pages", 3)
+        monkeypatch.setattr("app.routes.documents.upsert_chunks", lambda chunks: None)
+
+        response = client.post(
+            "/upload",
+            files={"file": ("ok.pdf", make_pdf(["page"] * 3), "application/pdf")},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["pages"] == 3
+
     def test_rejects_a_pdf_it_cannot_parse(self, monkeypatch):
         monkeypatch.setattr("app.routes.documents.upsert_chunks", lambda chunks: None)
 

@@ -31,6 +31,8 @@ Work in progress — v1 is being built in public.
 
 Scanned PDFs are out of scope for v1 — they carry no text layer and need OCR.
 The app detects them and says so rather than returning an empty answer.
+v1 also indexes up to 20 pages, because ingestion is synchronous and embeds on
+CPU. Async ingestion for longer documents is a v2 item.
 
 ## Stack
 

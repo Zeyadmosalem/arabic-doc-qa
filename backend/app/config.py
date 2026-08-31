@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     qdrant_api_key: str = ""
     qdrant_collection: str = "documents"
     embedding_model: str = "intfloat/multilingual-e5-base"
+    # Ingestion is synchronous and embeds on CPU, so a long PDF would outlast
+    # a typical host's request timeout. Tune after deploying.
+    max_pages: int = 20
     cors_origins: list[str] = ["http://localhost:5173"]
 
 

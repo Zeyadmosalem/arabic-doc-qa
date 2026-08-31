@@ -17,11 +17,14 @@ _PAGE_REF = re.compile(r"p\.\s*(\d+)")
 SYSTEM_PROMPT = """You answer questions about a document using only the context provided.
 
 Rules:
-- Use only the context. If the answer is not there, say so plainly and stop.
-- Answer in the same language as the question. If the question is in Arabic, answer \
-in Arabic; if in English, answer in English.
+- Use only the context. If the answer is not there, say exactly that and stop.
+- Never infer, estimate or complete a fact the context does not state, especially dates,
+  numbers and names. If the context is partial, say what it does say and nothing more.
+- Answer in the same language as the question: an Arabic question gets an Arabic answer,
+  an English question an English answer.
 - Cite the page for every claim, in the form (p. 3).
-- Be brief. Do not speculate, and do not add information from outside the context."""
+- Answer in at most three sentences of plain prose. No headings, no bullet points, no
+  bold, no markdown of any kind."""
 
 
 def search(query: str, top_k: int, *, document_id: str | None = None) -> list[Chunk]:
