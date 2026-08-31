@@ -63,8 +63,12 @@ def extract_pages(pdf_bytes: bytes) -> list[Page]:
         1-based page number and its extracted text.
     """
     with pymupdf.open(stream=pdf_bytes, filetype="pdf") as document:
+        # sort=False is deliberate. Sorting reorders text geometrically, which
+        # reverses Arabic word order: a heading that reads "طلب حجز وجبات"
+        # comes back as "وجبات حجز طلب". Content-stream order is the logical
+        # reading order for both scripts.
         return [
-            Page(number=number, text=page.get_text("text", sort=True))
+            Page(number=number, text=page.get_text("text", sort=False))
             for number, page in enumerate(document, start=1)
         ]
 

@@ -1,3 +1,5 @@
+import pymupdf
+
 from app.models import Page
 from app.services.ingest import CHUNK_SIZE, chunk_pages, extract_pages, normalize_arabic
 
@@ -9,6 +11,20 @@ class TestExtractPages:
         assert [page.number for page in pages] == [1, 2]
         assert "Alpha" in pages[0].text
         assert "Bravo" in pages[1].text
+
+    def test_preserves_reading_order_instead_of_sorting_geometrically(self):
+        # Geometric sorting reverses Arabic word order, turning a heading that
+        # reads "طلب حجز وجبات" into "وجبات حجز طلب". Written in ASCII here so
+        # the guard runs anywhere: BRAVO is written first but sits lower on the
+        # page, so a geometric sort would put ALPHA in front of it.
+        document = pymupdf.open()
+        page = document.new_page()
+        page.insert_text((72, 400), "BRAVO", fontsize=12)
+        page.insert_text((72, 200), "ALPHA", fontsize=12)
+
+        text = extract_pages(document.tobytes())[0].text
+
+        assert text.index("BRAVO") < text.index("ALPHA")
 
     def test_pages_with_no_text_come_back_empty_rather_than_missing(self, make_pdf):
         pages = extract_pages(make_pdf(["", ""]))

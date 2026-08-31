@@ -29,6 +29,9 @@ Work in progress — v1 is being built in public.
 - [ ] Public deployment
 - [ ] 10-question evaluation (5 Arabic, 5 English)
 
+Scanned PDFs are out of scope for v1 — they carry no text layer and need OCR.
+The app detects them and says so rather than returning an empty answer.
+
 ## Stack
 
 Python 3.11 · FastAPI · PyMuPDF · sentence-transformers (`intfloat/multilingual-e5-base`) · Qdrant · Groq (`qwen/qwen3.8-27b`) · Vite + React + TypeScript
