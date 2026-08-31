@@ -1,16 +1,17 @@
 import { useRef, useState } from "react"
-import { ApiError, uploadDocument, type UploadedDocument } from "../api"
+import { ApiError, uploadDocument, type UploadProgress, type UploadedDocument } from "../api"
 
 interface Props {
-  onUploaded: (document: UploadedDocument) => void
+  onUploaded: (document: UploadedDocument, file: File) => void
 }
 
 export default function UploadScreen({ onUploaded }: Props) {
-  const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<UploadProgress | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
+  const busy = progress !== null
 
   async function send(file: File) {
     if (!file.name.toLowerCase().endsWith(".pdf")) {
@@ -19,8 +20,8 @@ export default function UploadScreen({ onUploaded }: Props) {
     }
 
     setError(null)
-    setBusy(true)
     setElapsed(0)
+    setProgress({ phase: "sending", percent: 0 })
     const startedAt = Date.now()
     const ticker = window.setInterval(
       () => setElapsed(Math.round((Date.now() - startedAt) / 1000)),
@@ -28,7 +29,7 @@ export default function UploadScreen({ onUploaded }: Props) {
     )
 
     try {
-      onUploaded(await uploadDocument(file))
+      onUploaded(await uploadDocument(file, setProgress), file)
     } catch (problem) {
       setError(
         problem instanceof ApiError
@@ -37,16 +38,7 @@ export default function UploadScreen({ onUploaded }: Props) {
       )
     } finally {
       window.clearInterval(ticker)
-      setBusy(false)
-    }
-  }
-
-  function onDrop(event: React.DragEvent) {
-    event.preventDefault()
-    setDragging(false)
-    const file = event.dataTransfer.files[0]
-    if (file && !busy) {
-      void send(file)
+      setProgress(null)
     }
   }
 
@@ -59,18 +51,40 @@ export default function UploadScreen({ onUploaded }: Props) {
           setDragging(true)
         }}
         onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
+        onDrop={(event) => {
+          event.preventDefault()
+          setDragging(false)
+          const file = event.dataTransfer.files[0]
+          if (file && !busy) {
+            void send(file)
+          }
+        }}
       >
         {busy ? (
           <>
-            <div className="spinner" aria-hidden="true" />
-            <p className="dropzone__title">Reading and indexing your document</p>
+            <div className="progress">
+              <div
+                className="progress__bar"
+                style={{
+                  width: progress.phase === "sending" ? `${progress.percent}%` : "100%",
+                }}
+              />
+            </div>
+            <p className="dropzone__title">
+              {progress.phase === "sending" ? "Uploading…" : "Reading and indexing"}
+            </p>
             <p className="muted">
-              {elapsed}s elapsed — embeddings run on CPU, so this takes a moment.
+              {progress.phase === "sending"
+                ? `${progress.percent}% transferred`
+                : `${elapsed}s — embeddings run on CPU, so this takes a moment.`}
             </p>
           </>
         ) : (
           <>
+            <svg className="dropzone__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 16V4m0 0L8 8m4-4 4 4" />
+              <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+            </svg>
             <p className="dropzone__title">Drop a PDF here</p>
             <p className="muted">Arabic or English, up to 20 pages</p>
             <button className="button" onClick={() => fileInput.current?.click()}>

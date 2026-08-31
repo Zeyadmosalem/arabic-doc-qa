@@ -1,25 +1,46 @@
 import { useState } from "react"
 import type { UploadedDocument } from "./api"
-import ChatScreen from "./components/ChatScreen"
 import UploadScreen from "./components/UploadScreen"
+import Workspace from "./components/Workspace"
+import { useTheme } from "./theme"
+
+interface Loaded {
+  document: UploadedDocument
+  file: File
+}
 
 export default function App() {
-  const [uploaded, setUploaded] = useState<UploadedDocument | null>(null)
+  const [loaded, setLoaded] = useState<Loaded | null>(null)
+  const { theme, toggle } = useTheme()
 
   return (
-    <div className="app">
+    <div className={`app${loaded ? " app--wide" : ""}`}>
       <header className="masthead">
-        <h1>Arabic Doc Q&amp;A</h1>
-        <p className="muted">
-          Ask a PDF in Arabic or English. Every answer cites the page it came from.
-        </p>
+        <div>
+          <h1>Arabic Doc Q&amp;A</h1>
+          <p className="muted">
+            Ask a PDF in Arabic or English. Every answer cites the page it came from.
+          </p>
+        </div>
+        <button
+          className="iconbutton"
+          onClick={toggle}
+          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          title={theme === "dark" ? "Light theme" : "Dark theme"}
+        >
+          {theme === "dark" ? "☀" : "☾"}
+        </button>
       </header>
 
       <main>
-        {uploaded ? (
-          <ChatScreen document={uploaded} onChangeDocument={() => setUploaded(null)} />
+        {loaded ? (
+          <Workspace
+            document={loaded.document}
+            file={loaded.file}
+            onChangeDocument={() => setLoaded(null)}
+          />
         ) : (
-          <UploadScreen onUploaded={setUploaded} />
+          <UploadScreen onUploaded={(document, file) => setLoaded({ document, file })} />
         )}
       </main>
     </div>

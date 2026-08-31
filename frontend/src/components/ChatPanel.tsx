@@ -11,37 +11,47 @@ interface Message {
 
 interface Props {
   document: UploadedDocument
-  onChangeDocument: () => void
+  onCitationClick: (page: number) => void
 }
 
-export default function ChatScreen({ document, onChangeDocument }: Props) {
+const STARTERS = [
+  "What is this document about?",
+  "Summarise the main points.",
+  "ما هو موضوع هذا المستند؟",
+  "ما أهم النقاط الواردة فيه؟",
+]
+
+export default function ChatPanel({ document: uploaded, onCitationClick }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [question, setQuestion] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState<number | null>(null)
   const endOfThread = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    endOfThread.current?.scrollIntoView({ behavior: "smooth" })
+    endOfThread.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }, [messages, busy])
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault()
-    const asked = question.trim()
+  async function ask(asked: string) {
     if (!asked || busy) {
       return
     }
-
     setMessages((current) => [...current, { id: Date.now(), role: "user", text: asked }])
     setQuestion("")
     setError(null)
     setBusy(true)
 
     try {
-      const answer = await askQuestion(asked, document.document_id)
+      const answer = await askQuestion(asked, uploaded.document_id)
       setMessages((current) => [
         ...current,
-        { id: Date.now() + 1, role: "assistant", text: answer.text, citations: answer.citations },
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          text: answer.text,
+          citations: answer.citations,
+        },
       ])
     } catch (problem) {
       setError(
@@ -54,26 +64,31 @@ export default function ChatScreen({ document, onChangeDocument }: Props) {
     }
   }
 
-  return (
-    <section className="panel">
-      <div className="docbar">
-        <div>
-          <strong className="docbar__name">{document.filename}</strong>
-          <span className="muted">
-            {" "}
-            · {document.pages} pages · {document.chunks} chunks
-          </span>
-        </div>
-        <button className="button button--quiet" onClick={onChangeDocument}>
-          Use another document
-        </button>
-      </div>
+  async function copy(message: Message) {
+    await navigator.clipboard.writeText(message.text)
+    setCopied(message.id)
+    window.setTimeout(() => setCopied(null), 1500)
+  }
 
+  return (
+    <section className="chat">
       <div className="thread">
-        {messages.length === 0 && (
-          <p className="muted empty">
-            Ask a question in Arabic or English. Every answer cites the page it came from.
-          </p>
+        {messages.length === 0 && !busy && (
+          <div className="starters">
+            <p className="muted">Ask in Arabic or English. Every answer cites its page.</p>
+            <div className="starters__chips">
+              {STARTERS.map((starter) => (
+                <button
+                  key={starter}
+                  className="chip"
+                  dir={directionOf(starter)}
+                  onClick={() => void ask(starter)}
+                >
+                  {starter}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         {messages.map((message) => (
@@ -82,15 +97,28 @@ export default function ChatScreen({ document, onChangeDocument }: Props) {
               {message.text}
             </p>
 
+            {message.role === "assistant" && (
+              <div className="bubble__tools">
+                <button className="linkbutton" onClick={() => void copy(message)}>
+                  {copied === message.id ? "Copied" : "Copy"}
+                </button>
+              </div>
+            )}
+
             {message.citations && message.citations.length > 0 && (
               <div className="citations">
                 {message.citations.map((citation) => (
-                  <div key={citation.page} className="citation">
+                  <button
+                    key={citation.page}
+                    className="citation"
+                    onClick={() => onCitationClick(citation.page)}
+                    title={`Open page ${citation.page}`}
+                  >
                     <span className="citation__page">p. {citation.page}</span>
                     <span dir={directionOf(citation.snippet)} className="citation__snippet">
                       {citation.snippet}
                     </span>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -99,7 +127,11 @@ export default function ChatScreen({ document, onChangeDocument }: Props) {
 
         {busy && (
           <article className="bubble bubble--assistant">
-            <p className="muted">Searching the document…</p>
+            <span className="typing" aria-label="Searching the document">
+              <i />
+              <i />
+              <i />
+            </span>
           </article>
         )}
 
@@ -108,7 +140,13 @@ export default function ChatScreen({ document, onChangeDocument }: Props) {
 
       {error && <p className="notice notice--error">{error}</p>}
 
-      <form className="composer" onSubmit={submit}>
+      <form
+        className="composer"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void ask(question.trim())
+        }}
+      >
         <input
           className="composer__input"
           dir={directionOf(question)}
