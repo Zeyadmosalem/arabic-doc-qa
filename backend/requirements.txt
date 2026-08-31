@@ -1,0 +1,9 @@
+# Hugging Face Spaces installs from this file. Kept in step with pyproject.toml.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pymupdf>=1.24
+sentence-transformers>=3.0
+qdrant-client>=1.9
+groq>=0.11
+pydantic-settings>=2.4
+python-multipart>=0.0.9

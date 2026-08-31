@@ -3,8 +3,8 @@ title: Arabic Doc QA API
 emoji: 📄
 colorFrom: green
 colorTo: gray
-sdk: docker
-app_port: 7860
+sdk: gradio
+app_file: space_app.py
 pinned: false
 ---
 

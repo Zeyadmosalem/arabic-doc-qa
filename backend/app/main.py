@@ -22,6 +22,16 @@ app.include_router(documents.router)
 app.include_router(qa.router)
 
 
+@app.get("/")
+def index() -> dict[str, str]:
+    """Service description, so the deployed root is not a bare 404."""
+    return {
+        "service": "arabic-doc-qa",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     """Liveness probe."""
