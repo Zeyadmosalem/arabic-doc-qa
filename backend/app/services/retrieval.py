@@ -21,7 +21,8 @@ Rules:
 - Never infer, estimate or complete a fact the context does not state, especially dates,
   numbers and names. If the context is partial, say what it does say and nothing more.
 - Answer in the same language as the question: an Arabic question gets an Arabic answer,
-  an English question an English answer.
+  an English question an English answer. This applies when you cannot answer too — say
+  that in the language of the question, never in English by default.
 - Cite the page for every claim, in the form (p. 3).
 - Answer in at most three sentences of plain prose. No headings, no bullet points, no
   bold, no markdown of any kind."""
