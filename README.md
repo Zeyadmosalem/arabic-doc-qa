@@ -73,6 +73,19 @@ A short GIF lands on Day 4. Both halves run on Vercel's free tier; the API is a
 serverless function, which is only possible because embedding moved out of the
 process.
 
+## Deployment
+
+Two Vercel projects from this one repo, distinguished only by root directory:
+
+| Project | Root directory | Serves |
+| --- | --- | --- |
+| `arabic-doc-qa` | `frontend` | the React app |
+| `arabic-doc-qa-api` | `backend` | FastAPI, as a serverless function |
+
+Setting the root directory on each project is required. Without it a
+git-triggered build runs from the repo root and fails — the front end looks for
+`vite` where there is no `node_modules`.
+
 ## Architecture
 
 Coming soon — ingestion and retrieval diagram, Day 4.
