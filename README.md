@@ -26,7 +26,7 @@ Work in progress — v1 is being built in public.
 - [x] Multilingual embeddings + Qdrant
 - [x] Answers with page citations
 - [x] React UI with RTL
-- [ ] Public deployment
+- [x] Public deployment
 - [ ] 10-question evaluation (5 Arabic, 5 English)
 
 Scanned PDFs are out of scope for v1 — they carry no text layer and need OCR.
@@ -65,7 +65,13 @@ make web                      # http://localhost:5173
 
 ## Demo
 
-Coming soon — hosted link and a short GIF, Day 3–4.
+**Live:** https://arabic-doc-qa.vercel.app
+
+API: https://arabic-doc-qa-api.vercel.app ([docs](https://arabic-doc-qa-api.vercel.app/docs))
+
+A short GIF lands on Day 4. Both halves run on Vercel's free tier; the API is a
+serverless function, which is only possible because embedding moved out of the
+process.
 
 ## Architecture
 
