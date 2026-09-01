@@ -1,4 +1,4 @@
-.PHONY: dev web test lint build-web deploy
+.PHONY: dev web test lint build-web
 
 dev:
 	cd backend && uvicorn app.main:app --reload
@@ -14,8 +14,3 @@ test:
 
 lint:
 	cd backend && ruff check .
-
-# Both halves also deploy automatically on push to main.
-deploy:
-	cd backend && vercel deploy --prod
-	cd frontend && vercel deploy --prod

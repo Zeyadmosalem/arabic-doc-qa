@@ -101,6 +101,10 @@ Setting the root directory on each project is required. Without it a git-trigger
 runs from the repo root and fails — the front end looks for `vite` where there is no
 `node_modules`.
 
+Pushing to `main` deploys both. Because each project sets a root directory, the CLI
+cannot deploy from inside a subdirectory — it would upload that directory as the
+root and Vercel would then look for `backend/backend`.
+
 `backend/Dockerfile` also builds a working container, for any host that takes one.
 
 ## Evaluation
