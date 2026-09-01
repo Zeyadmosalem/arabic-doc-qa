@@ -1,5 +1,6 @@
 """Turning an uploaded PDF into indexed, searchable chunks."""
 
+import math
 import re
 import uuid
 
@@ -14,7 +15,8 @@ from app.models import Chunk, Page
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
 VECTOR_SIZE = 1024
-EMBEDDING_URL = "https://api.jina.ai/v1/embeddings"
+JINA_URL = "https://api.jina.ai/v1/embeddings"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 EMBEDDING_TIMEOUT = 60.0
 
 # Stable namespace so re-ingesting the same document overwrites its chunks
@@ -127,36 +129,46 @@ def _split(text: str) -> list[str]:
     return pieces
 
 
-def embed_texts(texts: list[str], *, task: str = "retrieval.passage") -> list[list[float]]:
-    """Embed texts with the configured multilingual embedding model.
+def embed_texts(texts: list[str], *, task: str = "passage") -> list[list[float]]:
+    """Embed texts with the configured provider.
 
-    Runs through Jina's API rather than a local model: the smallest multilingual
-    model that fits this job still needs ~800 MB resident once ONNX Runtime has
-    allocated its arena, which no free host will give us.
+    Runs through an API rather than a local model: the smallest multilingual
+    model that fits this job still needs ~700 MB resident once its ONNX runtime
+    has allocated its arena, which no free host will give us.
 
-    The model is asymmetric, so stored text and questions must be embedded for
-    different tasks or retrieval quality drops.
+    Both providers are asymmetric, so stored text and questions must be embedded
+    for different tasks or retrieval quality drops, and both are configured to
+    return 1024 dimensions so switching between them needs no re-indexing.
 
     Args:
         texts: Chunk texts (when indexing) or a question (when searching).
-        task: "retrieval.passage" for indexing, "retrieval.query" for searching.
+        task: "passage" for indexing, "query" for searching.
 
     Returns:
         One 1024-dim vector per input text, in the same order.
     """
     if not texts:
         return []
+
+    prepared = [normalize_arabic(text) for text in texts]
+    if settings.embedding_provider == "gemini":
+        return _embed_gemini(prepared, task)
+    return _embed_jina(prepared, task)
+
+
+def _embed_jina(texts: list[str], task: str) -> list[list[float]]:
+    """Embed via Jina. https://jina.ai/embeddings"""
     if not settings.jina_api_key:
         raise RuntimeError("JINA_API_KEY is not set")
 
     response = httpx.post(
-        EMBEDDING_URL,
+        JINA_URL,
         timeout=EMBEDDING_TIMEOUT,
         headers={"Authorization": f"Bearer {settings.jina_api_key}"},
         json={
             "model": settings.embedding_model,
-            "task": task,
-            "input": [normalize_arabic(text) for text in texts],
+            "task": f"retrieval.{task}",
+            "input": texts,
         },
     )
     response.raise_for_status()
@@ -164,6 +176,41 @@ def embed_texts(texts: list[str], *, task: str = "retrieval.passage") -> list[li
     # per item; sorting on it costs nothing and removes the assumption.
     data = sorted(response.json()["data"], key=lambda item: item["index"])
     return [item["embedding"] for item in data]
+
+
+def _embed_gemini(texts: list[str], task: str) -> list[list[float]]:
+    """Embed via Google AI Studio. https://aistudio.google.com/apikey"""
+    if not settings.gemini_api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+
+    model = settings.embedding_model
+    task_type = "RETRIEVAL_QUERY" if task == "query" else "RETRIEVAL_DOCUMENT"
+    response = httpx.post(
+        f"{GEMINI_URL}/{model}:batchEmbedContents",
+        timeout=EMBEDDING_TIMEOUT,
+        params={"key": settings.gemini_api_key},
+        json={
+            "requests": [
+                {
+                    "model": f"models/{model}",
+                    "content": {"parts": [{"text": text}]},
+                    "taskType": task_type,
+                    "outputDimensionality": VECTOR_SIZE,
+                }
+                for text in texts
+            ]
+        },
+    )
+    response.raise_for_status()
+    # Truncated Gemini embeddings are not unit length, and cosine distance in
+    # Qdrant assumes they are.
+    return [_unit(item["values"]) for item in response.json()["embeddings"]]
+
+
+def _unit(vector: list[float]) -> list[float]:
+    """Scale a vector to unit length, leaving an all-zero vector alone."""
+    norm = math.sqrt(sum(value * value for value in vector))
+    return [value / norm for value in vector] if norm else vector
 
 
 def upsert_chunks(chunks: list[Chunk]) -> None:

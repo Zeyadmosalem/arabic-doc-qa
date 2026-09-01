@@ -56,7 +56,7 @@ def search(query: str, top_k: int, *, document_id: str | None = None) -> list[Ch
 
     response = client.query_points(
         collection_name=settings.qdrant_collection,
-        query=embed_texts([query], task="retrieval.query")[0],
+        query=embed_texts([query], task="query")[0],
         query_filter=query_filter,
         limit=top_k,
         with_payload=True,

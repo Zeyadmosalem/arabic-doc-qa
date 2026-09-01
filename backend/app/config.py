@@ -17,7 +17,11 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
     qdrant_collection: str = "documents"
+    # "jina" or "gemini" — both free and both 1024-dim, so switching needs no
+    # re-indexing.
+    embedding_provider: str = "jina"
     jina_api_key: str = ""
+    gemini_api_key: str = ""
     embedding_model: str = "jina-embeddings-v3"
     # Ingestion is synchronous and embeds on CPU, so a long PDF would outlast
     # a typical host's request timeout. Tune after deploying.

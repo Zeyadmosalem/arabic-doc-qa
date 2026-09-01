@@ -24,7 +24,7 @@ need an answer they can trace back to a page, not a plausible-sounding paragraph
 
 ```
 PDF ──► extract ──► chunk ──► embed ──► Qdrant
-        PyMuPDF     ≤1000 chars    jina-embeddings-v3
+        PyMuPDF     ≤1000 chars    gemini-embedding-001
         reading     never crossing  1024-dim
         order       a page boundary
 
@@ -54,12 +54,14 @@ first real Arabic PDF tested against it was 271 photographed pages.
 **Documents are capped at 20 pages,** because ingestion is synchronous. Async ingestion
 for longer documents is a v2 item.
 
-**Embeddings run through Jina's API rather than a local model.** `multilingual-e5-base`
+**Embeddings run through an API rather than a local model.** `multilingual-e5-base`
 under sentence-transformers needed ~800 MB resident, and the smallest multilingual model
 available under ONNX still needed ~700 MB once its runtime had allocated its arena —
 above every free tier available. Moving to an API took the service to 132 MB and cut
 ingestion of a 12-page PDF from 29s to 4s. Running the model in-process is a v2 item, for
-when the deployment budget allows it.
+when the deployment budget allows it. Two providers are supported — Gemini and Jina,
+both free and both 1024-dim — selected with `EMBEDDING_PROVIDER`, so running out of
+quota on one is a config change rather than a rewrite.
 
 **Some PDFs damage their own text.** One government document tested against this maps the
 lam-alef ligature to a single wrong character, so `سلامة` extracts as `سامة`. That is a
@@ -67,7 +69,7 @@ defect in the file's embedded font, not something extraction can repair.
 
 ## Stack
 
-Python 3.11 · FastAPI · PyMuPDF · Jina embeddings (`jina-embeddings-v3`) · Qdrant · Groq (`qwen/qwen3.8-27b`) · Vite + React + TypeScript
+Python 3.11 · FastAPI · PyMuPDF · Gemini embeddings (`gemini-embedding-001`) · Qdrant · Groq (`qwen/qwen3.8-27b`) · Vite + React + TypeScript
 
 ## Run locally
 
