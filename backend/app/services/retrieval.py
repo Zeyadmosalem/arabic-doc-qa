@@ -11,8 +11,13 @@ from app.services.ingest import embed_texts, get_qdrant_client
 
 SNIPPET_LENGTH = 240
 
-# Matches the "(p. 3)" / "(p. 10, p. 11)" refs the prompt asks the model to emit.
-_PAGE_REF = re.compile(r"p\.\s*(\d+)")
+_ARABIC = re.compile(r"[؀-ۿ]")
+_LATIN = re.compile(r"[A-Za-z]")
+
+# Matches "(p. 3)" and "(p. 10, p. 11)". Also accepts the Arabic "ص." because
+# some models translate the label when answering in Arabic, and a citation
+# silently dropped here falls back to listing every retrieved page.
+_PAGE_REF = re.compile(r"(?:p\.|ص\.)\s*(\d+)")
 
 SYSTEM_PROMPT = """You answer questions about a document using only the context provided.
 
@@ -20,10 +25,10 @@ Rules:
 - Use only the context. If the answer is not there, say exactly that and stop.
 - Never infer, estimate or complete a fact the context does not state, especially dates,
   numbers and names. If the context is partial, say what it does say and nothing more.
-- Answer in the same language as the question: an Arabic question gets an Arabic answer,
-  an English question an English answer. This applies when you cannot answer too — say
-  that in the language of the question, never in English by default.
-- Cite the page for every claim, in the form (p. 3).
+- Answer in the language named at the end of the question, including when you cannot
+  answer.
+- Cite the page for every claim, in the form (p. 3). Use that exact form even when
+  answering in Arabic; do not translate the label.
 - Answer in at most three sentences of plain prose. No headings, no bullet points, no
   bold, no markdown of any kind."""
 
@@ -89,16 +94,31 @@ def answer(question: str, chunks: list[Chunk]) -> Answer:
         raise RuntimeError("GROQ_API_KEY is not set")
 
     context = "\n\n".join(f"[page {chunk.page}]\n{chunk.text}" for chunk in chunks)
+    # Name the language rather than leaving it to a general rule. Asked only to
+    # match the question's language, the model answered Arabic questions in
+    # Arabic but fell back to English whenever it had to decline.
+    language = "Arabic" if _is_arabic(question) else "English"
     completion = Groq(api_key=settings.groq_api_key).chat.completions.create(
         model=settings.groq_model,
         temperature=0,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
+            {
+                "role": "user",
+                "content": (
+                    f"Context:\n{context}\n\nQuestion: {question}"
+                    f"\n\nWrite the answer in {language}, including if you cannot answer."
+                ),
+            },
         ],
     )
     text = (completion.choices[0].message.content or "").strip()
     return Answer(text=text, citations=_citations(chunks, cited_in=text))
+
+
+def _is_arabic(text: str) -> bool:
+    """Whether a string is predominantly Arabic, by script count."""
+    return len(_ARABIC.findall(text)) > len(_LATIN.findall(text))
 
 
 def _citations(chunks: list[Chunk], *, cited_in: str = "") -> list[Citation]:

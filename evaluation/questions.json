@@ -6,29 +6,51 @@
       "id": "ar-1",
       "language": "ar",
       "question": "متى تأسست مدينة الرياض؟",
-      "expect_any": ["1746"],
-      "expect_pages": [1]
+      "expect_any": [
+        "1746"
+      ],
+      "expect_pages": [
+        1
+      ]
     },
     {
       "id": "ar-2",
       "language": "ar",
       "question": "كم بلغ عدد سكان الرياض في إحصاء 2022؟",
-      "expect_any": ["7009120", "7.009.120", "7009", "7 مليون", "7 ملايين"],
-      "expect_pages": [2]
+      "expect_any": [
+        "7009120",
+        "7.009.120",
+        "7009",
+        "7 مليون",
+        "7 ملايين"
+      ],
+      "expect_pages": [
+        2
+      ]
     },
     {
       "id": "ar-3",
       "language": "ar",
       "question": "ما هو الرمز البريدي لمدينة الرياض؟",
-      "expect_any": ["11461"],
-      "expect_pages": [2]
+      "expect_any": [
+        "11461"
+      ],
+      "expect_pages": [
+        2
+      ]
     },
     {
       "id": "ar-4",
       "language": "ar",
       "question": "ما هو ارتفاع مدينة الرياض عن سطح البحر بالمتر؟",
-      "expect_any": ["612"],
-      "expect_pages": [2]
+      "expect_any": [
+        "612",
+        "600"
+      ],
+      "expect_pages": [
+        2
+      ],
+      "note": "The infobox states both 612 m and 1,968 ft (600 m), and extracts as jumbled key-value text, so either figure is defensible."
     },
     {
       "id": "ar-5",
@@ -40,29 +62,49 @@
       "id": "en-1",
       "language": "en",
       "question": "When was the city of Riyadh founded?",
-      "expect_any": ["1746"],
-      "expect_pages": [1]
+      "expect_any": [
+        "1746"
+      ],
+      "expect_pages": [
+        1
+      ]
     },
     {
       "id": "en-2",
       "language": "en",
       "question": "What was the population of Riyadh in the 2022 census?",
-      "expect_any": ["7009120", "7.009.120", "7009", "7 million"],
-      "expect_pages": [2]
+      "expect_any": [
+        "7009120",
+        "7.009.120",
+        "7009",
+        "7 million"
+      ],
+      "expect_pages": [
+        2
+      ]
     },
     {
       "id": "en-3",
       "language": "en",
       "question": "What is the postal code of Riyadh?",
-      "expect_any": ["11461"],
-      "expect_pages": [2]
+      "expect_any": [
+        "11461"
+      ],
+      "expect_pages": [
+        2
+      ]
     },
     {
       "id": "en-4",
       "language": "en",
       "question": "How many government universities are there in Riyadh?",
-      "expect_any": ["5", "five"],
-      "expect_pages": [7]
+      "expect_any": [
+        "5",
+        "five"
+      ],
+      "expect_pages": [
+        7
+      ]
     },
     {
       "id": "en-5",

@@ -45,6 +45,23 @@ sentence straddling a page break gets split; exact citations are worth more.
 **Citations are filtered to the pages the model actually cited** inline, intersected with
 what it was shown, so an invented page number cannot produce a citation.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  U[Browser<br/>React + RTL] -->|POST /upload| A[FastAPI<br/>Vercel function]
+  U -->|POST /ask| A
+  A -->|extract + chunk| P[PyMuPDF]
+  A -->|embed 1024-dim| E[Gemini embeddings]
+  A -->|upsert / search| Q[(Qdrant Cloud)]
+  A -->|grounded answer| G[Groq<br/>gpt-oss-120b]
+  G --> A
+  A -->|answer + cited pages| U
+```
+
+The API holds no state. Everything persistent lives in Qdrant, which is what lets
+the backend run as a serverless function that starts fresh on every request.
+
 ## Limitations
 
 **Scanned PDFs are out of scope.** They carry no text layer and need OCR. The app detects
@@ -69,7 +86,7 @@ defect in the file's embedded font, not something extraction can repair.
 
 ## Stack
 
-Python 3.11 · FastAPI · PyMuPDF · Gemini embeddings (`gemini-embedding-001`) · Qdrant · Groq (`qwen/qwen3.8-27b`) · Vite + React + TypeScript
+Python 3.11 · FastAPI · PyMuPDF · Gemini embeddings (`gemini-embedding-001`) · Qdrant · Groq (`openai/gpt-oss-120b`) · Vite + React + TypeScript
 
 ## Run locally
 
@@ -111,7 +128,56 @@ root and Vercel would then look for `backend/backend`.
 
 ## Evaluation
 
-Coming soon — a 10-question set, five Arabic and five English, with the results table.
+Ten questions against an Arabic Wikipedia article on Riyadh — five Arabic, five
+English. The English ones are cross-lingual by construction: the answer only
+exists in Arabic text. Two questions have no answer in the document at all, to
+check the model declines rather than invents.
+
+Reproducible: `python evaluation/run_eval.py --api https://arabic-doc-qa-api.vercel.app`.
+Questions and grading live in [`evaluation/`](evaluation/), full output in
+[`evaluation/results.md`](evaluation/results.md).
+
+A question passes only if all three hold — the answer contains the expected
+fact, **cites the page that fact is on**, and is written in the language it was
+asked in. Grading citations separately is the point: a right answer pointing at
+the wrong page is a failure, because the citation is the product.
+
+| Model | Score | Failures |
+| --- | --- | --- |
+| `openai/gpt-oss-120b` | **10 / 10** | — |
+| `qwen/qwen3.8-27b` | 8 / 10 | two correct answers citing the wrong page |
+
+### What the evaluation changed
+
+**It picked the model.** Qwen was chosen on a three-question spot check earlier
+and looked fine. Across ten questions it attributed correct facts to the wrong
+retrieved page twice — invisible unless citations are graded separately from
+answers.
+
+**It found a bug.** An Arabic question with no answer in the document was
+declined in English. The rule to answer in the question's language was already
+in the prompt; the model read it as applying to answers and treated declining as
+something else. Fixed by detecting the question's script in code and naming the
+required language in the request, rather than relying on a general instruction.
+
+**It found a bug in itself.** The first grader passed that case, because it only
+checked that a refusal happened. Answer language is now graded independently.
+A second grader gap followed: `لا يمكنني` was missing from the refusal
+phrase list, so a valid Arabic refusal scored as a failure.
+
+**It corrected a false conclusion.** English questions appeared 8× slower than
+Arabic. They were also always asked last. Re-running with English first made
+English fast and Arabic slow — it is Groq's free-tier rate limiting and client
+backoff under burst, not language. Median response is ~2s, with a tail to ~15s
+once several requests land together.
+
+### Known weaknesses
+
+`ar-4` asks Riyadh's elevation. The infobox states both `612 متر` and
+`1,968 قدم (600 م)`, and infoboxes extract as jumbled key-value text, so the
+model can return either figure defensibly. Numeric facts from tables and
+infoboxes are the least reliable part of this pipeline — prose is handled well,
+layout is not.
 
 ## License
 
