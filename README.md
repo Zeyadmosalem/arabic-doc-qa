@@ -45,18 +45,6 @@ sentence straddling a page break gets split; exact citations are worth more.
 **Citations are filtered to the pages the model actually cited** inline, intersected with
 what it was shown, so an invented page number cannot produce a citation.
 
-## Status
-
-Work in progress — v1 is being built in public.
-
-- [x] PDF upload and extraction
-- [x] Chunking with Arabic normalization
-- [x] Multilingual embeddings + Qdrant
-- [x] Answers with page citations
-- [x] React UI with RTL
-- [x] Public deployment
-- [ ] 10-question evaluation (5 Arabic, 5 English)
-
 ## Limitations
 
 **Scanned PDFs are out of scope.** They carry no text layer and need OCR. The app detects
