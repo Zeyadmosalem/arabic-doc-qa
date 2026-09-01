@@ -3,17 +3,19 @@
 import re
 import uuid
 
+import httpx
 import pymupdf
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmodels
-from sentence_transformers import SentenceTransformer
 
 from app.config import settings
 from app.models import Chunk, Page
 
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
-VECTOR_SIZE = 768
+VECTOR_SIZE = 1024
+EMBEDDING_URL = "https://api.jina.ai/v1/embeddings"
+EMBEDDING_TIMEOUT = 60.0
 
 # Stable namespace so re-ingesting the same document overwrites its chunks
 # instead of duplicating them.
@@ -31,7 +33,6 @@ _ALEF_MAQSURA = re.compile("ى")
 _WHITESPACE = re.compile(r"\s+")
 _DIGIT_MAP = {base + i: str(i) for base in (0x0660, 0x06F0) for i in range(10)}
 
-_model: SentenceTransformer | None = None
 _client: QdrantClient | None = None
 
 
@@ -126,23 +127,43 @@ def _split(text: str) -> list[str]:
     return pieces
 
 
-def embed_texts(texts: list[str], *, prefix: str = "passage") -> list[list[float]]:
-    """Embed texts with the configured multilingual sentence-transformers model.
+def embed_texts(texts: list[str], *, task: str = "retrieval.passage") -> list[list[float]]:
+    """Embed texts with the configured multilingual embedding model.
 
-    E5 is asymmetric: stored text must be prefixed "passage: " and questions
-    "query: ", or retrieval quality drops sharply.
+    Runs through Jina's API rather than a local model: the smallest multilingual
+    model that fits this job still needs ~800 MB resident once ONNX Runtime has
+    allocated its arena, which no free host will give us.
+
+    The model is asymmetric, so stored text and questions must be embedded for
+    different tasks or retrieval quality drops.
 
     Args:
         texts: Chunk texts (when indexing) or a question (when searching).
-        prefix: "passage" for indexing, "query" for searching.
+        task: "retrieval.passage" for indexing, "retrieval.query" for searching.
 
     Returns:
-        One L2-normalized 768-dim vector per input text, in the same order.
+        One 1024-dim vector per input text, in the same order.
     """
-    model = _get_model()
-    prepared = [f"{prefix}: {normalize_arabic(text)}" for text in texts]
-    vectors = model.encode(prepared, normalize_embeddings=True, show_progress_bar=False)
-    return [vector.tolist() for vector in vectors]
+    if not texts:
+        return []
+    if not settings.jina_api_key:
+        raise RuntimeError("JINA_API_KEY is not set")
+
+    response = httpx.post(
+        EMBEDDING_URL,
+        timeout=EMBEDDING_TIMEOUT,
+        headers={"Authorization": f"Bearer {settings.jina_api_key}"},
+        json={
+            "model": settings.embedding_model,
+            "task": task,
+            "input": [normalize_arabic(text) for text in texts],
+        },
+    )
+    response.raise_for_status()
+    # The API is documented to echo input order, but it also returns an index
+    # per item; sorting on it costs nothing and removes the assumption.
+    data = sorted(response.json()["data"], key=lambda item: item["index"])
+    return [item["embedding"] for item in data]
 
 
 def upsert_chunks(chunks: list[Chunk]) -> None:
@@ -205,11 +226,3 @@ def ensure_collection(client: QdrantClient) -> None:
         field_name="document_id",
         field_schema=qmodels.PayloadSchemaType.KEYWORD,
     )
-
-
-def _get_model() -> SentenceTransformer:
-    """Load the embedding model once per process."""
-    global _model
-    if _model is None:
-        _model = SentenceTransformer(settings.embedding_model)
-    return _model

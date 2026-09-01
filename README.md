@@ -31,12 +31,18 @@ Work in progress — v1 is being built in public.
 
 Scanned PDFs are out of scope for v1 — they carry no text layer and need OCR.
 The app detects them and says so rather than returning an empty answer.
-v1 also indexes up to 20 pages, because ingestion is synchronous and embeds on
-CPU. Async ingestion for longer documents is a v2 item.
+v1 also indexes up to 20 pages, because ingestion is synchronous.
+
+Embeddings run through Jina's API rather than a local model. `multilingual-e5-base`
+under sentence-transformers needed ~800 MB resident, and the smallest multilingual
+model that fits this job still needed ~700 MB once ONNX Runtime had allocated its
+arena — above every free tier available. Moving to an API took the service to
+132 MB and cut ingestion of a 12-page PDF from 29s to 4s. Running the model in
+-process is a v2 item, for when the deployment budget allows it.
 
 ## Stack
 
-Python 3.11 · FastAPI · PyMuPDF · sentence-transformers (`intfloat/multilingual-e5-base`) · Qdrant · Groq (`qwen/qwen3.8-27b`) · Vite + React + TypeScript
+Python 3.11 · FastAPI · PyMuPDF · Jina embeddings (`jina-embeddings-v3`) · Qdrant · Groq (`qwen/qwen3.8-27b`) · Vite + React + TypeScript
 
 ## Run locally
 

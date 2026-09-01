@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
     qdrant_collection: str = "documents"
-    embedding_model: str = "intfloat/multilingual-e5-base"
+    jina_api_key: str = ""
+    embedding_model: str = "jina-embeddings-v3"
     # Ingestion is synchronous and embeds on CPU, so a long PDF would outlast
     # a typical host's request timeout. Tune after deploying.
     max_pages: int = 20
